@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLOUND GAME — Akun</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#080a12;color:#fff;font:14px Arial,sans-serif}
+header{background:#0c0f18;border-bottom:1px solid #252c40;position:sticky;top:0;z-index:5}.nav{max-width:1050px;margin:auto;padding:14px 16px;display:flex;align-items:center;justify-content:space-between;gap:10px}
+.brand{font-size:22px;font-weight:1000;color:#61e8ff}.account{color:#aeb7ca;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:45vw}
+button{border:0;border-radius:11px;padding:10px 13px;font-weight:800;cursor:pointer}.logout{background:#22293a;color:#fff}
+main{max-width:1050px;margin:auto;padding:20px 16px}.welcome{background:linear-gradient(135deg,#17213b,#101522);padding:20px;border:1px solid #293249;border-radius:20px}.welcome h1{margin:0 0 6px}.muted{color:#8f98ae;line-height:1.55}
+.grid{display:grid;grid-template-columns:1.3fr .7fr;gap:16px;margin-top:16px}@media(max-width:720px){.grid{grid-template-columns:1fr}}
+.panel{background:#111624;border:1px solid #292f43;border-radius:20px;overflow:hidden}.pad{padding:18px}.coins{font-size:30px;color:#ffd65a;font-weight:900}.label{font-size:11px;color:#8f98ae;text-transform:uppercase;letter-spacing:1px}
+.tabs{display:flex;gap:8px;padding:12px;background:#0d111b}.tab{flex:1;background:#1a2030;color:#aeb7ca}.tab.active{background:#61e8ff;color:#071019}
+.game{display:none}.game.active{display:block}.space{height:340px;position:relative;background:radial-gradient(circle at 50% 50%,#1d4a8d,transparent 35%),#0d1427;overflow:hidden}.mult{text-align:center;padding-top:42px;font-size:55px;font-weight:1000;color:#8cf5ff}.rocket{position:absolute;left:50%;top:55%;font-size:62px;transform:translate(-50%,-50%);filter:drop-shadow(0 0 20px #61e8ff)}.status{text-align:center;color:#aeb7ca}.actions{text-align:center;margin-top:18px}.primary{background:#61e8ff;color:#071019}.secondary{background:#22293a;color:#fff}.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:22px}.tile{height:70px;background:#eee8d8;color:#222;font-size:30px;box-shadow:0 4px #94896c}.matched{opacity:.25}.log{max-height:180px;overflow:auto}.row{padding:9px 0;border-bottom:1px solid #252c40;display:flex;justify-content:space-between}.plus{color:#58e39a}
+.donate{margin-top:16px}.donate img{width:150px;background:#fff;border-radius:12px}.note{font-size:11px;color:#7d879e;line-height:1.5}
+</style>
+</head>
+<body>
+<header><div class="nav"><div class="brand">CLOUND GAME</div><div class="account" id="email">Memuat akun...</div><button class="logout" id="logout">Keluar</button></div></header>
+<main>
+<section class="welcome"><h1 id="welcome">Selamat datang 👋</h1><div class="muted">Kamu sudah login ke akun yang terdaftar. Akun ini menggunakan Firebase Authentication.</div></section>
+<div class="grid">
+<section class="panel pad"><div class="label">Koin virtual</div><div class="coins" id="coins">10.000 🪙</div><div class="note">Koin hanya untuk mini-game dan tidak dapat diuangkan.</div></section>
+<section class="panel pad"><div class="label">Akun</div><div id="uid" class="muted">-</div></section>
+</div>
+
+<section class="panel" style="margin-top:16px">
+<div class="tabs"><button class="tab active" id="ts">🚀 Space</button><button class="tab" id="tm">🀄 Mahjong</button></div>
+<div class="game active" id="space">
+<div class="space"><div class="mult" id="mult">x1.00</div><div class="rocket" id="rocket">🚀</div><div class="status" id="status">Simulasi multiplier virtual</div><div class="actions"><button class="primary" id="start">MULAI</button> <button class="secondary" id="reset">RESET</button></div></div>
+</div>
+<div class="game" id="mahjong"><div class="pad" style="text-align:center"><b>Cocokkan pasangan tile</b><div class="muted">+500 koin virtual per pasangan.</div></div><div class="tiles" id="tiles"></div></div>
+</section>
+
+<section class="panel pad donate">
+<h3>💙 Donasi</h3><img src="qr-dana.jpg" alt="QR DANA donasi"><p class="muted">QR ini hanya untuk donasi sukarela kepada pengelola website. Donasi tidak menjadi saldo taruhan, tidak membeli peluang menang, dan tidak memberikan hak withdraw.</p>
+</section>
+
+<section class="panel pad" style="margin-top:16px"><h3>Aktivitas</h3><div class="log" id="log"></div></section>
+</main>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getAuth,onAuthStateChanged,signOut } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js";
+const app=initializeApp(firebaseConfig),auth=getAuth(app),$=id=>document.getElementById(id);
+let coins=Number(localStorage.getItem("cg_coins")||10000),timer=null,running=false,v=1,sel=null;
+function render(){$("coins").textContent=coins.toLocaleString("id-ID")+" 🪙";localStorage.setItem("cg_coins",coins)}
+onAuthStateChanged(auth,user=>{
+ if(!user){location.href="index.html";return}
+ $("email").textContent=user.email||"Akun";$("welcome").textContent="Selamat datang, "+(user.email?.split("@")[0]||"Pemain")+" 👋";$("uid").textContent=user.uid;render();
+});
+$("logout").onclick=async()=>{await signOut(auth);location.href="index.html"};
+$("ts").onclick=()=>switchGame("space");$("tm").onclick=()=>switchGame("mahjong");
+function switchGame(n){$("space").classList.toggle("active",n==="space");$("mahjong").classList.toggle("active",n==="mahjong");$("ts").classList.toggle("active",n==="space");$("tm").classList.toggle("active",n==="mahjong");if(n==="mahjong"&&!$("tiles").children.length)newBoard()}
+$("start").onclick=()=>{if(running)return;running=true;v=1;$("start").disabled=true;$("status").textContent="Simulasi berjalan...";timer=setInterval(()=>{v*=1.035;$("mult").textContent="x"+v.toFixed(2);$("rocket").style.top=(55-Math.min(v/20,25))+"%";if(v>=500||Math.random()<.025)end()},120)}
+$("reset").onclick=()=>{clearInterval(timer);running=false;v=1;$("mult").textContent="x1.00";$("rocket").style.top="55%";$("start").disabled=false;$("status").textContent="Simulasi multiplier virtual"}
+function end(){clearInterval(timer);running=false;$("start").disabled=false;let b=Math.min(5000,Math.max(100,Math.floor(v*10)));coins+=b;render();log("Space "+$("mult").textContent,b);$("status").textContent="Selesai — +"+b.toLocaleString("id-ID")+" koin virtual"}
+const sy=["🀙","🀚","🀛","🀜","🀝","🀞","🀟","🀠"];let matched=0;
+function newBoard(){matched=0;sel=null;let a=[...sy,...sy].sort(()=>Math.random()-.5);$("tiles").innerHTML="";a.forEach(x=>{let b=document.createElement("button");b.className="tile";b.textContent=x;b.dataset.v=x;b.onclick=()=>pick(b);$("tiles").appendChild(b)})}
+function pick(b){if(b.classList.contains("matched")||b===sel)return;b.style.outline="3px solid #61e8ff";if(!sel){sel=b;return}if(sel.dataset.v===b.dataset.v){sel.classList.add("matched");b.classList.add("matched");sel.style.outline="";b.style.outline="";sel=null;matched++;coins+=500;render();log("Mahjong pasangan",500)}else{let a=sel;sel=null;setTimeout(()=>{a.style.outline="";b.style.outline=""},400)}}
+function log(t,n){let d=document.createElement("div");d.className="row";d.innerHTML="<span>"+t+"</span><b class=plus>+"+n.toLocaleString("id-ID")+" 🪙</b>";$("log").prepend(d)}
+newBoard();
+</script>
+</body>
+</html>

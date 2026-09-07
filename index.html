@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>CLOUND GAME — Login</title>
+<style>
+*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#080a12;color:#fff;font-family:Arial,sans-serif;padding:18px}
+.box{width:min(430px,100%);background:#111624;border:1px solid #2a3146;border-radius:22px;padding:25px;box-shadow:0 20px 60px #0008}
+.brand{font-size:28px;font-weight:1000;color:#61e8ff}.sub{color:#8993aa;font-size:12px;margin:5px 0 22px}
+.tabs{display:flex;gap:8px;margin-bottom:18px}.tab{flex:1;padding:11px;border:0;border-radius:11px;background:#1c2232;color:#aeb7ca;font-weight:800;cursor:pointer}.tab.active{background:#61e8ff;color:#071019}
+input{width:100%;padding:13px;margin:7px 0;background:#0b0f19;color:#fff;border:1px solid #30384e;border-radius:11px;outline:0}input:focus{border-color:#61e8ff}
+button.submit{width:100%;margin-top:10px;padding:13px;border:0;border-radius:11px;background:linear-gradient(135deg,#61e8ff,#6b8cff);font-weight:900;cursor:pointer}
+.msg{min-height:20px;margin:10px 0;color:#ff8090;font-size:13px}.info{font-size:11px;line-height:1.5;color:#78839b;margin-top:16px}
+</style>
+</head>
+<body>
+<div class="box">
+  <div class="brand">CLOUND GAME</div>
+  <div class="sub">Akun pemain • Email & password</div>
+  <div class="tabs">
+    <button class="tab active" id="loginTab">Login</button>
+    <button class="tab" id="registerTab">Daftar</button>
+  </div>
+
+  <form id="loginForm">
+    <input id="loginEmail" type="email" placeholder="Email" autocomplete="email" required>
+    <input id="loginPassword" type="password" placeholder="Password" autocomplete="current-password" required>
+    <div class="msg" id="loginMsg"></div>
+    <button class="submit">MASUK</button>
+  </form>
+
+  <form id="registerForm" style="display:none">
+    <input id="regEmail" type="email" placeholder="Email" autocomplete="email" required>
+    <input id="regPassword" type="password" placeholder="Password minimal 6 karakter" autocomplete="new-password" minlength="6" required>
+    <input id="regPassword2" type="password" placeholder="Ulangi password" autocomplete="new-password" minlength="6" required>
+    <div class="msg" id="regMsg"></div>
+    <button class="submit">BUAT AKUN</button>
+  </form>
+
+  <div class="info">
+    Login ini memakai Firebase Authentication email/password. Password tidak disimpan di localStorage.
+    Sebelum dipakai, isi konfigurasi Firebase di file <b>firebase-config.js</b> dan aktifkan Email/Password Authentication.
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword }
+from "https://www.gstatic.com/firebasejs/12.2.1/firebase-auth.js";
+import { firebaseConfig } from "./firebase-config.js";
+
+const app=initializeApp(firebaseConfig);
+const auth=getAuth(app);
+const $=id=>document.getElementById(id);
+
+function tabs(login){
+  $("loginForm").style.display=login?"block":"none";
+  $("registerForm").style.display=login?"none":"block";
+  $("loginTab").classList.toggle("active",login);
+  $("registerTab").classList.toggle("active",!login);
+  $("loginMsg").textContent="";$("regMsg").textContent="";
+}
+$("loginTab").onclick=()=>tabs(true);
+$("registerTab").onclick=()=>tabs(false);
+
+onAuthStateChanged(auth,user=>{
+  if(user) location.href="game.html";
+});
+
+$("loginForm").addEventListener("submit",async e=>{
+  e.preventDefault(); $("loginMsg").textContent="Memproses...";
+  try{
+    await signInWithEmailAndPassword(auth,$("loginEmail").value.trim(),$("loginPassword").value);
+    location.href="game.html";
+  }catch(err){
+    $("loginMsg").textContent=humanError(err.code);
+  }
+});
+
+$("registerForm").addEventListener("submit",async e=>{
+  e.preventDefault();
+  if($("regPassword").value!==$("regPassword2").value){
+    $("regMsg").textContent="Password tidak sama.";return;
+  }
+  $("regMsg").textContent="Membuat akun...";
+  try{
+    await createUserWithEmailAndPassword(auth,$("regEmail").value.trim(),$("regPassword").value);
+    location.href="game.html";
+  }catch(err){
+    $("regMsg").textContent=humanError(err.code);
+  }
+});
+
+function humanError(code){
+ const m={
+ "auth/invalid-email":"Format email tidak valid.",
+ "auth/email-already-in-use":"Email tersebut sudah terdaftar.",
+ "auth/weak-password":"Password terlalu lemah.",
+ "auth/invalid-credential":"Email atau password salah.",
+ "auth/user-not-found":"Akun tidak ditemukan.",
+ "auth/too-many-requests":"Terlalu banyak percobaan. Coba lagi nanti."
+ };
+ return m[code]||("Gagal: "+code);
+}
+</script>
+</body>
+</html>
